@@ -11,7 +11,7 @@ import { VSBuffer } from 'vs/base/common/buffer';
 import { CancellationToken } from 'vs/base/common/cancellation';
 import { Event } from 'vs/base/common/event';
 import { isEqual } from 'vs/base/common/extpath';
-import { IDisposable, toDisposable } from 'vs/base/common/lifecycle';
+import { Disposable, IDisposable, toDisposable } from 'vs/base/common/lifecycle';
 import { basename, dirname } from 'vs/base/common/path';
 import { isLinux, isWindows } from 'vs/base/common/platform';
 import { extUriBiasedIgnorePathCase, joinPath } from 'vs/base/common/resources';
@@ -27,6 +27,7 @@ import { AbstractDiskFileSystemProvider, IDiskFileSystemProviderOptions } from '
 import { toErrorMessage } from 'vs/base/common/errorMessage';
 import { UniversalWatcherClient } from 'vs/platform/files/node/watcher/watcherClient';
 import { NodeJSWatcherClient } from 'vs/platform/files/node/watcher/nodejs/nodejsClient';
+import { env } from 'vs/base/common/process';
 
 /**
  * Enable graceful-fs very early from here to have it enabled
@@ -153,7 +154,13 @@ export class DiskFileSystemProvider extends AbstractDiskFileSystemProvider imple
 	private readonly resourceLocks = new ResourceMap<Barrier>(resource => extUriBiasedIgnorePathCase.getComparisonKey(resource));
 
 	private async createResourceLock(resource: URI): Promise<IDisposable> {
-		this.logService.trace(`[Disk FileSystemProvider]: request to acquire resource lock (${this.toFilePath(resource)})`);
+		if (env['VSCODE_DISABLE_WRITE_LOCKS']) {
+			this.logService.info(`[Disk FileSystemProvider]: resource locking is disabled (${this.toFilePath(resource)})`);
+
+			return Disposable.None;
+		}
+
+		this.logService.info(`[Disk FileSystemProvider]: request to acquire resource lock (${this.toFilePath(resource)})`);
 
 		// Await pending locks for resource
 		// It is possible for a new lock being
@@ -161,7 +168,7 @@ export class DiskFileSystemProvider extends AbstractDiskFileSystemProvider imple
 		// to loop over locks until no lock remains
 		let existingLock: Barrier | undefined = undefined;
 		while (existingLock = this.resourceLocks.get(resource)) {
-			this.logService.trace(`[Disk FileSystemProvider]: waiting for resource lock to be released (${this.toFilePath(resource)})`);
+			this.logService.info(`[Disk FileSystemProvider]: waiting for resource lock to be released (${this.toFilePath(resource)})`);
 
 			await existingLock.wait();
 		}
@@ -170,10 +177,10 @@ export class DiskFileSystemProvider extends AbstractDiskFileSystemProvider imple
 		const newLock = new Barrier();
 		this.resourceLocks.set(resource, newLock);
 
-		this.logService.trace(`[Disk FileSystemProvider]: new resource lock created (${this.toFilePath(resource)})`);
+		this.logService.info(`[Disk FileSystemProvider]: new resource lock created (${this.toFilePath(resource)})`);
 
 		return toDisposable(() => {
-			this.logService.trace(`[Disk FileSystemProvider]: resource lock disposed (${this.toFilePath(resource)})`);
+			this.logService.info(`[Disk FileSystemProvider]: resource lock disposed (${this.toFilePath(resource)})`);
 
 			// Delete and open lock
 			this.resourceLocks.delete(resource);
@@ -185,7 +192,7 @@ export class DiskFileSystemProvider extends AbstractDiskFileSystemProvider imple
 		let lock: IDisposable | undefined = undefined;
 		try {
 			if (options?.atomic) {
-				this.logService.trace(`[Disk FileSystemProvider]: atomic read operation started (${this.toFilePath(resource)})`);
+				this.logService.info(`[Disk FileSystemProvider]: atomic read operation started (${this.toFilePath(resource)})`);
 
 				// When the read should be atomic, make sure
 				// to await any pending locks for the resource
