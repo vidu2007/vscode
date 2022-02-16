@@ -153,14 +153,14 @@ export class DiskFileSystemProvider extends AbstractDiskFileSystemProvider imple
 
 	private readonly resourceLocks = new ResourceMap<Barrier>(resource => extUriBiasedIgnorePathCase.getComparisonKey(resource));
 
-	private async createResourceLock(resource: URI): Promise<IDisposable> {
+	private async createResourceLock(resource: URI, source: string): Promise<IDisposable> {
 		if (env['VSCODE_DISABLE_WRITE_LOCKS']) {
 			this.logService.info(`[Disk FileSystemProvider]: resource locking is disabled (${this.toFilePath(resource)})`);
 
 			return Disposable.None;
 		}
 
-		this.logService.info(`[Disk FileSystemProvider]: request to acquire resource lock (${this.toFilePath(resource)})`);
+		this.logService.info(`[Disk FileSystemProvider]: request to acquire resource lock (${this.toFilePath(resource)}, source: ${source})`);
 
 		// Await pending locks for resource
 		// It is possible for a new lock being
@@ -168,7 +168,7 @@ export class DiskFileSystemProvider extends AbstractDiskFileSystemProvider imple
 		// to loop over locks until no lock remains
 		let existingLock: Barrier | undefined = undefined;
 		while (existingLock = this.resourceLocks.get(resource)) {
-			this.logService.info(`[Disk FileSystemProvider]: waiting for resource lock to be released (${this.toFilePath(resource)})`);
+			this.logService.info(`[Disk FileSystemProvider]: waiting for resource lock to be released (${this.toFilePath(resource)}, source: ${source})`);
 
 			await existingLock.wait();
 		}
@@ -177,10 +177,10 @@ export class DiskFileSystemProvider extends AbstractDiskFileSystemProvider imple
 		const newLock = new Barrier();
 		this.resourceLocks.set(resource, newLock);
 
-		this.logService.info(`[Disk FileSystemProvider]: new resource lock created (${this.toFilePath(resource)})`);
+		this.logService.info(`[Disk FileSystemProvider]: new resource lock created (${this.toFilePath(resource)}, source: ${source})`);
 
 		return toDisposable(() => {
-			this.logService.info(`[Disk FileSystemProvider]: resource lock disposed (${this.toFilePath(resource)})`);
+			this.logService.info(`[Disk FileSystemProvider]: resource lock disposed (${this.toFilePath(resource)}, source: ${source})`);
 
 			// Delete and open lock
 			this.resourceLocks.delete(resource);
@@ -197,7 +197,7 @@ export class DiskFileSystemProvider extends AbstractDiskFileSystemProvider imple
 				// When the read should be atomic, make sure
 				// to await any pending locks for the resource
 				// and lock for the duration of the read.
-				lock = await this.createResourceLock(resource);
+				lock = await this.createResourceLock(resource, 'readFile');
 			}
 
 			const filePath = this.toFilePath(resource);
@@ -241,7 +241,7 @@ export class DiskFileSystemProvider extends AbstractDiskFileSystemProvider imple
 			}
 
 			// Open
-			handle = await this.open(resource, { create: true, unlock: opts.unlock });
+			handle = await this.open(resource, { create: true, unlock: opts.unlock, source: opts.source });
 
 			// Write content at once
 			await this.write(handle, 0, content, 0, content.byteLength);
@@ -267,7 +267,7 @@ export class DiskFileSystemProvider extends AbstractDiskFileSystemProvider imple
 		// from multiple places at the same time to the same file
 		let lock: IDisposable | undefined = undefined;
 		if (isFileOpenForWriteOptions(opts)) {
-			lock = await this.createResourceLock(resource);
+			lock = await this.createResourceLock(resource, opts.source ?? 'unknown');
 		}
 
 		let handle: number | undefined = undefined;

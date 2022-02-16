@@ -60,7 +60,7 @@ async function doReadFileIntoStream<T>(provider: IFileSystemProviderWithOpenRead
 	throwIfCancelled(token);
 
 	// open handle through provider
-	const handle = await provider.open(resource, { create: false });
+	const handle = await provider.open(resource, { create: false, source: 'doReadFileIntoStream' });
 
 	try {
 

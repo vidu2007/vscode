@@ -84,7 +84,7 @@ export class FileUserDataProvider extends Disposable implements
 	}
 
 	writeFile(resource: URI, content: Uint8Array, opts: FileWriteOptions): Promise<void> {
-		return this.fileSystemProvider.writeFile(this.toFileSystemResource(resource), content, opts);
+		return this.fileSystemProvider.writeFile(this.toFileSystemResource(resource), content, { ...opts, source: 'userData' });
 	}
 
 	delete(resource: URI, opts: FileDeleteOptions): Promise<void> {

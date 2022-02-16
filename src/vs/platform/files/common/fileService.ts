@@ -1082,7 +1082,7 @@ export class FileService extends Disposable implements IFileService {
 		return this.writeQueue.queueFor(resource, this.getExtUri(provider).providerExtUri).queue(async () => {
 
 			// open handle
-			const handle = await provider.open(resource, { create: true, unlock: options?.unlock ?? false });
+			const handle = await provider.open(resource, { create: true, unlock: options?.unlock ?? false, source: 'doWriteBuffered' });
 
 			// write into handle until all bytes from buffer have been written
 			try {
@@ -1193,7 +1193,7 @@ export class FileService extends Disposable implements IFileService {
 		}
 
 		// Write through the provider
-		await provider.writeFile(resource, buffer.buffer, { create: true, overwrite: true, unlock: options?.unlock ?? false });
+		await provider.writeFile(resource, buffer.buffer, { create: true, overwrite: true, unlock: options?.unlock ?? false, source: 'doWriteUnbufferedQueued' });
 	}
 
 	private async doPipeBuffered(sourceProvider: IFileSystemProviderWithOpenReadWriteCloseCapability, source: URI, targetProvider: IFileSystemProviderWithOpenReadWriteCloseCapability, target: URI): Promise<void> {
@@ -1207,8 +1207,8 @@ export class FileService extends Disposable implements IFileService {
 		try {
 
 			// Open handles
-			sourceHandle = await sourceProvider.open(source, { create: false });
-			targetHandle = await targetProvider.open(target, { create: true, unlock: false });
+			sourceHandle = await sourceProvider.open(source, { create: false, source: 'doPipeBufferedQueued' });
+			targetHandle = await targetProvider.open(target, { create: true, unlock: false, source: 'doPipeBufferedQueued' });
 
 			const buffer = VSBuffer.alloc(this.BUFFER_SIZE);
 
@@ -1247,7 +1247,7 @@ export class FileService extends Disposable implements IFileService {
 	}
 
 	private async doPipeUnbufferedQueued(sourceProvider: IFileSystemProviderWithFileReadWriteCapability, source: URI, targetProvider: IFileSystemProviderWithFileReadWriteCapability, target: URI): Promise<void> {
-		return targetProvider.writeFile(target, await sourceProvider.readFile(source), { create: true, overwrite: true, unlock: false });
+		return targetProvider.writeFile(target, await sourceProvider.readFile(source), { create: true, overwrite: true, unlock: false, source: 'doPipeUnbufferedQueued' });
 	}
 
 	private async doPipeUnbufferedToBuffered(sourceProvider: IFileSystemProviderWithFileReadWriteCapability, source: URI, targetProvider: IFileSystemProviderWithOpenReadWriteCloseCapability, target: URI): Promise<void> {
@@ -1257,7 +1257,7 @@ export class FileService extends Disposable implements IFileService {
 	private async doPipeUnbufferedToBufferedQueued(sourceProvider: IFileSystemProviderWithFileReadWriteCapability, source: URI, targetProvider: IFileSystemProviderWithOpenReadWriteCloseCapability, target: URI): Promise<void> {
 
 		// Open handle
-		const targetHandle = await targetProvider.open(target, { create: true, unlock: false });
+		const targetHandle = await targetProvider.open(target, { create: true, unlock: false, source: 'doPipeUnbufferedToBufferedQueued' });
 
 		// Read entire buffer from source and write buffered
 		try {

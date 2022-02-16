@@ -286,6 +286,8 @@ export interface FileWriteOptions extends FileOverwriteOptions, FileUnlockOption
 	 * throw an error otherwise if the file does not exist.
 	 */
 	readonly create: boolean;
+
+	readonly source?: string;
 }
 
 export type FileOpenOptions = FileOpenForReadOptions | FileOpenForWriteOptions;
@@ -300,6 +302,8 @@ export interface FileOpenForReadOptions {
 	 * A hint that the file should be opened for reading only.
 	 */
 	readonly create: false;
+
+	readonly source?: string;
 }
 
 export interface FileOpenForWriteOptions extends FileUnlockOptions {
@@ -308,6 +312,8 @@ export interface FileOpenForWriteOptions extends FileUnlockOptions {
 	 * A hint that the file should be opened for reading and writing.
 	 */
 	readonly create: true;
+
+	readonly source?: string;
 }
 
 export interface FileDeleteOptions {

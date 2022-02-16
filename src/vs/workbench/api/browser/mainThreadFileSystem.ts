@@ -259,7 +259,7 @@ class RemoteFileSystemProvider implements IFileSystemProviderWithFileReadWriteCa
 	}
 
 	writeFile(resource: URI, content: Uint8Array, opts: FileWriteOptions): Promise<void> {
-		return this._proxy.$writeFile(this._handle, resource, VSBuffer.wrap(content), opts);
+		return this._proxy.$writeFile(this._handle, resource, VSBuffer.wrap(content), { ...opts, source: 'extension' });
 	}
 
 	delete(resource: URI, opts: FileDeleteOptions): Promise<void> {
@@ -283,7 +283,7 @@ class RemoteFileSystemProvider implements IFileSystemProviderWithFileReadWriteCa
 	}
 
 	open(resource: URI, opts: FileOpenOptions): Promise<number> {
-		return this._proxy.$open(this._handle, resource, opts);
+		return this._proxy.$open(this._handle, resource, { ...opts, source: 'extension' });
 	}
 
 	close(fd: number): Promise<void> {
