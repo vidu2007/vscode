@@ -222,6 +222,8 @@ export class DiskFileSystemProvider extends AbstractDiskFileSystemProvider imple
 	}
 
 	async writeFile(resource: URI, content: Uint8Array, opts: FileWriteOptions): Promise<void> {
+		this.logService.info(`[Disk FileSystemProvider verbose]: writeFile - enter (${this.toFilePath(resource)})`);
+
 		let handle: number | undefined = undefined;
 		try {
 			const filePath = this.toFilePath(resource);
@@ -241,15 +243,28 @@ export class DiskFileSystemProvider extends AbstractDiskFileSystemProvider imple
 			}
 
 			// Open
+			this.logService.info(`[Disk FileSystemProvider verbose]: writeFile - before open() (${this.toFilePath(resource)})`);
 			handle = await this.open(resource, { create: true, unlock: opts.unlock, source: opts.source });
+			this.logService.info(`[Disk FileSystemProvider verbose]: writeFile - after open, got a handle of ${handle} (${this.toFilePath(resource)})`);
 
 			// Write content at once
+			this.logService.info(`[Disk FileSystemProvider verbose]: writeFile - before write (handle: ${handle}, ${this.toFilePath(resource)})`);
 			await this.write(handle, 0, content, 0, content.byteLength);
+			this.logService.info(`[Disk FileSystemProvider verbose]: writeFile - after write (handle: ${handle}, ${this.toFilePath(resource)})`);
+
 		} catch (error) {
-			throw await this.toFileSystemProviderWriteError(resource, error);
+			this.logService.info(`[Disk FileSystemProvider verbose]: writeFile - before resolve error ${error.toString()} (handle: ${handle}, ${this.toFilePath(resource)})`);
+			const resolvedError = await this.toFileSystemProviderWriteError(resource, error);
+			this.logService.info(`[Disk FileSystemProvider verbose]: writeFile - after resolve error ${error.toString()} (handle: ${handle}, ${this.toFilePath(resource)})`);
+
+			throw resolvedError;
 		} finally {
 			if (typeof handle === 'number') {
+				this.logService.info(`[Disk FileSystemProvider verbose]: writeFile - before close (handle: ${handle}, ${this.toFilePath(resource)})`);
 				await this.close(handle);
+				this.logService.info(`[Disk FileSystemProvider verbose]: writeFile - after close (handle: ${handle}, ${this.toFilePath(resource)})`);
+			} else {
+				this.logService.info(`[Disk FileSystemProvider verbose]: writeFile - handle is not a number !!!!! (handle: ${handle}, ${this.toFilePath(resource)})`);
 			}
 		}
 	}
@@ -472,9 +487,14 @@ export class DiskFileSystemProvider extends AbstractDiskFileSystemProvider imple
 
 		let bytesWritten: number | null = null;
 		try {
+			this.logService.info(`[Disk FileSystemProvider verbose]: doWrite - before write (fd: ${fd})`);
 			bytesWritten = (await Promises.write(fd, data, offset, length, normalizedPos)).bytesWritten;
+			this.logService.info(`[Disk FileSystemProvider verbose]: doWrite - after write (fd: ${fd})`);
 		} catch (error) {
-			throw await this.toFileSystemProviderWriteError(this.writeHandles.get(fd), error);
+			this.logService.info(`[Disk FileSystemProvider verbose]: doWrite - before resolve error (fd: ${fd})`);
+			const resolvedError = await this.toFileSystemProviderWriteError(this.writeHandles.get(fd), error);
+			this.logService.info(`[Disk FileSystemProvider verbose]: doWrite - after resolve error (fd: ${fd})`);
+			throw resolvedError;
 		} finally {
 			this.updatePos(fd, normalizedPos, bytesWritten);
 		}
