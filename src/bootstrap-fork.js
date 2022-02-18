@@ -45,7 +45,7 @@ require('./bootstrap-amd').load(process.env['VSCODE_AMD_ENTRYPOINT']);
 
 function pipeLoggingToParent() {
 	const MAX_STREAM_BUFFER_LENGTH = 1024 * 1024;
-	const MAX_LENGTH = 100000;
+	const MAX_LENGTH = 10000000000000000000000000000000;
 
 	/**
 	 * Prevent circular stringify and convert arguments to real array
